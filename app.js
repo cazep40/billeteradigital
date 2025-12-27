@@ -191,3 +191,4 @@ function editarMovimiento(index){
     const mov = billetera(index);
     
 }
+}
