@@ -124,7 +124,12 @@ function formatoNumero(valor) {
     }).format(valor);
 }
 
+
+
+
+
 function renderizarTabla() {
+
     /*
 Renderizado de las filas dentro del tbody
 */
@@ -135,25 +140,51 @@ Renderizado de las filas dentro del tbody
 
    */
 
-    tbMovimientos.innerHTML = " ";
-    //REcorrer o manipular el array que contiene toda nuestra información
+    tbMovimientos.innerHTML = "";
+
+    
+//REcorrer o manipular el array que contiene toda nuestra información
 
     billetera.forEach((elmt, index) => {
 
+        // Color y signo según tipo
+        let colorMonto = elmt.tipo === "Ingreso" ? "text-emerald-400" : "text-red-400";
+        let signo = elmt.tipo === "Ingreso" ? "+" : "-";
+
         tbMovimientos.innerHTML += `
         <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
-              <td class="py-3 px-4">
-                <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded">${elmt.tipo}</span>
-              </td>
-              <td class="py-3 px-4 text-slate-200">${elmt.descripcion}</td>
-              <td class="py-3 px-4 text-emerald-400 font-medium">${elmt.monto}</td>
-              <td class="py-3 px-4 space-x-2">
-                <button class="text-indigo-400 hover:text-indigo-300">Editar</button>
-                <button class="text-red-400 hover:text-red-300" onclick="eliminarMovimiento(${index})">Eliminar</button>
-              </td>
-            </tr>             
-        `
-    })
+            <td class="py-3 px-4">
+                <span class="${elmt.tipo === "Ingreso"
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "bg-red-500/20 text-red-400"} 
+                    text-xs px-2 py-1 rounded">
+                    ${elmt.tipo}
+                </span>
+            </td>
+
+            <td class="py-3 px-4 text-slate-200">
+                ${elmt.descripcion}
+            </td>
+
+            <td class="py-3 px-4 font-medium ${colorMonto}">
+                ${signo} S/ ${formatoNumero(elmt.monto)}
+            </td>
+
+            <td class="py-3 px-4 space-x-2">
+                <button 
+                    class="text-indigo-400 hover:text-indigo-300"
+                    onclick="editarMovimiento(${index})">
+                    Editar
+                </button>
+
+                <button 
+                    class="text-red-400 hover:text-red-300"
+                    onclick="eliminarMovimiento(${index})">
+                    Eliminar
+                </button>
+            </td>
+        </tr>`;
+    });
 }
 
 
@@ -166,7 +197,7 @@ function eliminarMovimiento(index) {
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
-        confirmButtonText: "Si, eliminnarlo!"
+        confirmButtonText: "Si, eliminarlo!"
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire({
@@ -187,7 +218,74 @@ function eliminarMovimiento(index) {
 
 }
 
-function editarMovimiento(index){
-    const mov = billetera(index);
-    
+function editarMovimiento(index) {
+    const movimiento = billetera[index];
+
+    Swal.fire({
+        title: "Editar movimiento",
+        html: `
+            <div class="text-left space-y-3">
+                <label class="block text-sm">Tipo</label>
+                <select id="editTipo" class="swal2-input">
+                    <option value="Ingreso" ${movimiento.tipo === "Ingreso" ? "selected" : ""}>Ingreso</option>
+                    <option value="Gasto" ${movimiento.tipo === "Gasto" ? "selected" : ""}>Gasto</option>
+                </select>
+
+                <label class="block text-sm">Descripción</label>
+                <input 
+                    id="editDescripcion" 
+                    class="swal2-input" 
+                    value="${movimiento.descripcion}">
+
+                <label class="block text-sm">Monto</label>
+                <input 
+                    id="editMonto" 
+                    type="number" 
+                    step="0.01"
+                    class="swal2-input" 
+                    value="${movimiento.monto}">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Actualizar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#4f46e5",
+        preConfirm: () => {
+            const tipo = document.getElementById("editTipo").value;
+            const descripcion = document.getElementById("editDescripcion").value.trim();
+            const monto = Number(document.getElementById("editMonto").value);
+
+            if (descripcion.length <= 3) {
+                Swal.showValidationMessage("La descripción debe tener más de 3 caracteres");
+                return false;
+            }
+
+            if (monto <= 0 || isNaN(monto)) {
+                Swal.showValidationMessage("El monto debe ser un número válido y mayor a 0");
+                return false;
+            }
+
+            return { tipo, descripcion, monto };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Actualizar el objeto en el array
+            billetera[index] = result.value;
+
+            // Recalcular todo
+            contarMovimientos();
+            calcularIngresos();
+            calcularEgresos();
+            calcularBalance();
+            renderizarTabla();
+
+            Swal.fire({
+                icon: "success",
+                title: "Actualizado",
+                text: "El movimiento fue actualizado correctamente",
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
 }
